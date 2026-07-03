@@ -21,15 +21,15 @@ class ExtratorDiario:
         DISPONIBILIZACAO = "disponibilizacao"
         PUBLICACAO = "publicacao"
 
-    def extrair(self, pdf_path) -> Diario:
-        with pdfplumber.open(pdf_path) as pdf:
+    def extrair(self, pdf_caminho: Path) -> Diario:
+        with pdfplumber.open(pdf_caminho) as pdf:
             texto = pdf.pages[0].extract_text()
 
             diario = Diario(
                 numero=self._extrair_numero(texto),
                 data_disponibilizacao=self._extrair_data(texto, self.DataTipo.DISPONIBILIZACAO),
                 data_publicacao=self._extrair_data(texto, self.DataTipo.PUBLICACAO),
-                nome_arquivo=Path(pdf_path).name
+                nome_arquivo=Path(pdf_caminho).name
             )
 
         return diario
@@ -42,15 +42,15 @@ class ExtratorDiario:
         meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"]
         
         if tipo == self.DataTipo.PUBLICACAO:
-            data_raw = re.search(r"Publicação: ([^)]*), ([^)]*)", texto, re.IGNORECASE).group(0) # type: ignore
+            data_crua = re.search(r"Publicação: ([^)]*), ([^)]*)", texto, re.IGNORECASE).group(0) # type: ignore
         else:
-            data_raw = re.search(r"Disponibilização: ([^)]*), ([^)]*)", texto, re.IGNORECASE).group(0) # type: ignore
+            data_crua = re.search(r"Disponibilização: ([^)]*), ([^)]*)", texto, re.IGNORECASE).group(0) # type: ignore
 
-        dia = re.search(r"\d{1,2}", data_raw).group(0) # type: ignore
-        ano = re.search(r"\d{4}", data_raw).group(0) # type: ignore
+        dia = re.search(r"\d{1,2}", data_crua).group(0) # type: ignore
+        ano = re.search(r"\d{4}", data_crua).group(0) # type: ignore
         mes = ""
         for i, mes in enumerate(meses):
-            if mes in data_raw.lower():
+            if mes in data_crua.lower():
                 mes = str(i + 1)
                 break
         

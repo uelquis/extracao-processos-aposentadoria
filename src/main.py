@@ -1,5 +1,7 @@
 from pathlib import Path
-from src.ExtratorDiario import ExtratorDiario
+from typing import Dict
+from src.ExtratorDiario import Diario, ExtratorDiario
+from src.ExtratorProcesso import ExtratorProcesso, ProcessoAposentadoria
 
 import typer
 
@@ -13,14 +15,19 @@ def processar(
     """Processa os PDFs do diretório informado e gera um arquivo Excel."""
 
     diarios_caminhos = sorted(entrada.rglob("*.pdf"))
-    diarios = []
+    processos : Dict[Diario, list[ProcessoAposentadoria]] = {}
     
     for diario_caminho in diarios_caminhos[:5]:
         diario = ExtratorDiario().extrair(diario_caminho)
-        diarios.append(diario)
 
-    for diario in diarios[:5]: 
+        processos[diario].extend(ExtratorProcesso().extrair(diario_caminho))
+
+    for diario in list(processos.keys())[:5]: 
         print(diario)
+
+    for diario in processos.keys():
+        for processo in processos[diario]:
+            print(processo)
 
 if __name__ == "__main__":
     app()
