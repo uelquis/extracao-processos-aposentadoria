@@ -37,7 +37,7 @@ def construir_matriz(caminhos: list[Path]) -> tuple[np.ndarray, np.ndarray, np.n
     processos : list[ProcessoAposentadoria] = []
     processos_offset : list[int] = []
     
-    for diario_caminho in caminhos[:1]:
+    for diario_caminho in caminhos:
         diario = ExtratorDiario().extrair(diario_caminho)
         diarios.append(diario)
 
