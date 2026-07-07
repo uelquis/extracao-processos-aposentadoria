@@ -38,17 +38,22 @@ def construir_matriz(caminhos: list[Path]) -> tuple[np.ndarray, np.ndarray, np.n
     processos_offset : list[int] = []
     
     for diario_caminho in caminhos:
-        diario = ExtratorDiario().extrair(diario_caminho)
-        diarios.append(diario)
+        try:
+            diario = ExtratorDiario().extrair(diario_caminho)
+            diarios.append(diario)
+        except Exception as e:
+            print(f"Erro ao processar o diário {diario_caminho}: {e}")
+            continue
 
-        processos_extraidos = ExtratorProcesso().extrair(diario_caminho)
+        try:
+            processos_extraidos = ExtratorProcesso().extrair(diario_caminho)
 
-        if len(processos) == 0:
-            processos_offset.append(0)
-        else:
-            processos_offset.append(len(processos))
+            processos_offset.append(0) if len(processos) == 0 else processos_offset.append(len(processos))
 
-        processos.extend(processos_extraidos)
+            processos.extend(processos_extraidos)
+        except Exception as e:
+            print(f"Erro ao processar os processos do diário {diario_caminho}: {e}")
+            continue
 
     # Contruir a matriz de leitura
     diarios_leitura = np.array(diarios, dtype=object)

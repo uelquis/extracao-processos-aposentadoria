@@ -42,9 +42,19 @@ class ExtratorDiario:
         meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"]
         
         if tipo == self.DataTipo.PUBLICACAO:
-            data_crua = re.search(r"Publicação: ([^)]*), ([^)]*)", texto, re.IGNORECASE).group(0) # type: ignore
+            match = re.search(r"Publicação: ([^)]*), ([^)]*)", texto, re.IGNORECASE)
+
+            if match is None:
+                raise ValueError("Não foi possível extrair a data de publicação do diário.")
+
+            data_crua = match.group(0) # type: ignore
         else:
-            data_crua = re.search(r"Disponibilização: ([^)]*), ([^)]*)", texto, re.IGNORECASE).group(0) # type: ignore
+            match = re.search(r"Disponibilização: ([^)]*), ([^)]*)", texto, re.IGNORECASE)
+
+            if match is None:
+                raise ValueError("Não foi possível extrair a data de disponibilização do diário.")
+            
+            data_crua = match.group(0) # type: ignore
 
         dia = re.search(r"\d{1,2}", data_crua).group(0) # type: ignore
         ano = re.search(r"\d{4}", data_crua).group(0) # type: ignore

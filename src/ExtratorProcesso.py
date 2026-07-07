@@ -53,13 +53,14 @@ class ExtratorProcesso:
         processos_numeros = self._extrair_numeros_dos_processos(texto)
         processos_assuntos = self._extrair_assuntos_dos_processos(texto)
         interessados = self._extrair_interessados_dos_processos(texto)
+        decisoes = self._extrair_numeros_das_decisoes(texto)
         
         [processos.append(ProcessoAposentadoria(
             numero=numero, 
-            assunto=processos_assuntos[processos_numeros.index(numero)].replace('\n', ' '),
-            # interessado=interessados[processos_numeros.index(numero)]
-            # orgao_de_origem
-            # decisao
+            assunto=processos_assuntos[processos_numeros.index(numero)],
+            interessado=interessados[processos_numeros.index(numero)],
+            orgao_origem="",
+            decisao=decisoes[processos_numeros.index(numero)] if decisoes else ""
 
         )) for numero in processos_numeros]
 
@@ -87,18 +88,37 @@ class ExtratorProcesso:
 
             textos_coluna_esquerda.append(texto_esquerda)
             textos_coluna_direita.append(texto_direita)
-
-        return textos_coluna_esquerda + textos_coluna_direita
+        
+        # ordernar os textos das colunas
+        textos = []
+        for i in range(len(textos_coluna_esquerda)):
+            if textos_coluna_esquerda[i] is None:
+                raise ValueError(f"Erro ao extrair o texto da coluna esquerda da página {i}. O texto extraído é vazio.")
+            if textos_coluna_direita[i] is None:
+                raise ValueError(f"Erro ao extrair o texto da coluna direita da página {i}. O texto extraído é vazio.")
+            
+            textos.append(textos_coluna_esquerda[i])
+            textos.append(textos_coluna_direita[i])
+        return textos
 
     def _extrair_numeros_dos_processos(self, texto: str) -> list[str]:
-        return re.findall(r'\bPROCESSO:?\s*TC[:\s/]*N?[º°]?\s*(\d{6}\/\d{4})\b', texto)
+        matches = re.findall(r'\bPROCESSO:?\s*TC[:\s/]*N?[º°]?\s*(\d{6}\/\d{4})\b', texto)
+        
+        return [m.replace('\n', ' ') for m in matches]
     
     def _extrair_assuntos_dos_processos(self, texto: str) -> list[str]:
-        return re.findall(r'ASSUNTO:[\s\xA0]*(.+?)(?=\n[A-Z]+:|$)', texto, re.DOTALL)
-
+        return re.findall(r'ASSUNTO:[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)', texto, re.DOTALL)
 
     def _extrair_interessados_dos_processos(self, texto: str) -> list[str]:
-        return re.findall(r'INTERESSAD[OA](?:[\s\xA0]*\(A\))?[\s\xA0]*:[\s\xA0]*(.+?)(?=\n[A-Z]+:|$)', texto, re.DOTALL)
+        matches = re.findall(r'INTERESSAD[OA](?:[\s\xA0]*\(A\))?[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)', texto, re.DOTALL)
+        
+        return [m.strip(':') for m in matches]
 
+    def _extrair_numeros_das_decisoes(self, texto: str) -> list[str]:
+        PADRAO = r'(?:(DECISÃO\b(?!\s*MONOCR[ÁA]TICA\b)[^\n]+)[\s\S]{0,500}?ASSUNTO:\s*APOSENTADORIA|ASSUNTO:\s*APOSENTADORIA[\s\S]{0,500}?(DECISÃO\b(?!\s*MONOCR[ÁA]TICA\b)[^\n]+))'
+        matches = re.findall(PADRAO, texto)
+
+        return [m[0] if m[0] != '' else m[1] for m in matches]
 
         
+    
