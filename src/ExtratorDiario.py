@@ -16,32 +16,35 @@ class Diario:
         return f"Diário {self.numero} - Disponibilização: {self.data_disponibilizacao}, Publicação: {self.data_publicacao}, Arquivo: {self.nome_arquivo}"
 
 class ExtratorDiario:
-    
+
     class DataTipo(Enum):
         DISPONIBILIZACAO = "disponibilizacao"
         PUBLICACAO = "publicacao"
 
-    def extrair(self, pdf_caminho: Path) -> Diario:
+    @staticmethod
+    def extrair(pdf_caminho: Path) -> Diario:
         with pdfplumber.open(pdf_caminho) as pdf:
             texto = pdf.pages[0].extract_text()
 
             diario = Diario(
-                numero=self._extrair_numero(texto),
-                data_disponibilizacao=self._extrair_data(texto, self.DataTipo.DISPONIBILIZACAO),
-                data_publicacao=self._extrair_data(texto, self.DataTipo.PUBLICACAO),
+                numero=ExtratorDiario._extrair_numero(texto),
+                data_disponibilizacao=ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.DISPONIBILIZACAO),
+                data_publicacao=ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.PUBLICACAO),
                 nome_arquivo=Path(pdf_caminho).name
             )
 
         return diario
     
-    def _extrair_numero(self, texto: str) -> str:
+    @staticmethod
+    def _extrair_numero(texto: str) -> str:
         match = re.search(r"Edição nº (\d{3}/\d{4})", texto)
         return match.group(1) if match else ""
 
-    def _extrair_data(self, texto: str, tipo: DataTipo) -> str:
+    @staticmethod
+    def _extrair_data(texto: str, tipo: DataTipo) -> str:
         meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"]
         
-        if tipo == self.DataTipo.PUBLICACAO:
+        if tipo == ExtratorDiario.DataTipo.PUBLICACAO:
             match = re.search(r"Publicação: ([^)]*), ([^)]*)", texto, re.IGNORECASE)
 
             if match is None:
