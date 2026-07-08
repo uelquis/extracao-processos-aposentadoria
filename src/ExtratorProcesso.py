@@ -13,9 +13,10 @@ class ProcessoAposentadoria:
     assunto: str = ""
     orgao_origem: str = ""
     decisao: str = ""
+    acordao: str = ""
     
     def __str__(self) -> str:
-        return f"Processo: {self.numero} \nInteressado: {self.interessado} \nAssunto: {self.assunto} \nÓrgão de Origem: {self.orgao_origem} \nDecisão: {self.decisao}"
+        return f"Processo: {self.numero} \nInteressado: {self.interessado} \nAssunto: {self.assunto} \nÓrgão de Origem: {self.orgao_origem} \nDecisão: {self.decisao} \nAcórdão: {self.acordao}"
 
 class ExtratorProcesso:
     
@@ -57,15 +58,17 @@ class ExtratorProcesso:
         processos_assuntos = ExtratorProcesso._extrair_assuntos_dos_processos(texto)
         interessados = ExtratorProcesso._extrair_interessados_dos_processos(texto)
         decisoes = ExtratorProcesso._extrair_numeros_das_decisoes(texto)
-        
+        orgaos_origem = ExtratorProcesso._extrair_orgaos_de_origem(texto)
+        acordaos = ExtratorProcesso._extrair_acordaos(texto)
+
         [processos.append(ProcessoAposentadoria(
             numero=numero, 
-            assunto=processos_assuntos[processos_numeros.index(numero)],
-            interessado=interessados[processos_numeros.index(numero)],
-            orgao_origem="",
-            decisao=decisoes[processos_numeros.index(numero)] if decisoes else ""
-
-        )) for numero in processos_numeros]
+            assunto=processos_assuntos[idx],
+            interessado=interessados[idx],
+            orgao_origem=orgaos_origem[idx],
+            decisao=decisoes[idx],
+            #acordao=acordaos[idx]
+        )) for idx, numero in enumerate(processos_numeros)]
 
         return processos
     
@@ -123,10 +126,56 @@ class ExtratorProcesso:
 
     @staticmethod
     def _extrair_numeros_das_decisoes(texto: str) -> list[str]:
-        PADRAO = r'(?:(DECISÃO\b(?!\s*MONOCR[ÁA]TICA\b)[^\n]+)[\s\S]{0,500}?ASSUNTO:\s*APOSENTADORIA|ASSUNTO:\s*APOSENTADORIA[\s\S]{0,500}?(DECISÃO\b(?!\s*MONOCR[ÁA]TICA\b)[^\n]+))'
-        matches = re.findall(PADRAO, texto)
+        decisoes = []
+    
+        PADRAO = r'ASSUNTO:[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
+        DISTANCIA = 500
 
-        return [m[0] if m[0] != '' else m[1] for m in matches]
+        for match in re.finditer(PADRAO, texto):
+
+            start_idx = max(0, match.start() - DISTANCIA)
+            end_idx = min(len(texto), match.end() + DISTANCIA)
+            window = texto[start_idx:end_idx]
+            
+            decisao_pattern = r'(DECISÃO\b(?!\s*MONOCR[ÁA]TICA\b)[\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|\n\s*[A-ZÁÉÍÓÚÂÊÔÃÕÇ]?[a-záéíóúâêôãõç]|$)'
+            decisao_match = re.search(decisao_pattern, window)
+            
+            if decisao_match:
+                decisoes.append(decisao_match.group(1).strip())
+            else:
+                decisoes.append("")
+                
+        return decisoes
+
+    @staticmethod
+    def _extrair_orgaos_de_origem(texto: str) -> list[str]:
+        orgaos_de_origem = []
+    
+        PADRAO = r'ASSUNTO:[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
+        DISTANCIA = 500
+
+        for match in re.finditer(PADRAO, texto, re.DOTALL):
+            start_idx = max(0, match.start() - DISTANCIA)
+            end_idx = min(len(texto), match.end() + DISTANCIA)
+            window = texto[start_idx:end_idx]
+            
+            orgao_pattern = r'(?:[ÓO]RG[ÃA]O DE ORIGEM|PROCED[ÊE]NCIA):?[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
+            orgao_match = re.search(orgao_pattern, window)
+            
+            if orgao_match:
+                orgaos_de_origem.append(orgao_match.group(1).strip())
+            else:
+                orgaos_de_origem.append("")
+
+        return orgaos_de_origem
+    
+    @staticmethod
+    def _extrair_acordaos(texto: str) -> list[str]:
+        # PADRÂO = r''
+        # matches = re.findall(PADRAO, texto)
+
+        return []
+    
 
         
     

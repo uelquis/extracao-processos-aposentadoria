@@ -1,9 +1,7 @@
 from pathlib import Path
-from typing import Dict
-from src.ExtratorDiario import Diario, ExtratorDiario
-from src.ExtratorProcesso import ExtratorProcesso, ProcessoAposentadoria
+from ExtratorDiario import Diario, ExtratorDiario
+from ExtratorProcesso import ExtratorProcesso, ProcessoAposentadoria
 from concurrent.futures import ProcessPoolExecutor, as_completed
-
 
 import typer, os
 import numpy as np
@@ -19,16 +17,15 @@ def processar(
 
     diarios_caminhos = sorted(entrada.rglob("*.pdf"))
 
-
     MAX_PROCESSOS = os.cpu_count()
     with ProcessPoolExecutor(max_workers=MAX_PROCESSOS) as executor:
         
-        futuros = {executor.submit(extrair_dados, caminho) for caminho in diarios_caminhos[:1]}
+        futuros = {executor.submit(extrair_dados, caminho) for caminho in diarios_caminhos[:10]}
 
         # Construir a matriz de dados
         diarios, processos, processos_offset = construir_matriz(futuros)
     
-    from src.ConstrutorExcel import ConstrutorExcel
+    from ConstrutorExcel import ConstrutorExcel
 
     try:
         # Exportar dados em uma tabela excel

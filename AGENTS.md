@@ -18,6 +18,7 @@ Você é um programador especializado em criar aplicações CLI com python
     - órgão de origem
     - interessado
     - decisão
+    - acórdão
 
 ## Detalhes de Implementação
 - sempre use anotações de tipo

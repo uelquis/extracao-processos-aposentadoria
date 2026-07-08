@@ -13,7 +13,7 @@ class ConstrutorExcel:
         if self._ws is None : raise ValueError("Não há uma worksheet ativa!")
 
         # Cabeçalhos
-        self._ws.append(['Processo número', 'Assunto', 'Interessado', 'Órgão de Origem', 'Decisão', 'Diário número', 'Disponibilização', 'Publicação', 'Arquivo nome'])
+        self._ws.append(['Processo número', 'Assunto', 'Interessado', 'Órgão de Origem', 'Decisão', 'Acórdão', 'Diário número', 'Disponibilização', 'Publicação', 'Arquivo nome'])
 
     def adicionar_linha(self, diario: Diario, processos):
         if self._ws is None : raise ValueError("Não há uma worksheet ativa!")
@@ -25,6 +25,7 @@ class ConstrutorExcel:
                 processo.interessado, 
                 processo.orgao_origem, 
                 processo.decisao,
+                processo.acordao,
                 diario.numero,
                 diario.data_disponibilizacao,
                 diario.data_publicacao,
