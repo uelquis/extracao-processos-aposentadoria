@@ -12,3 +12,5 @@ wheels/
 # Data files
 aposentadorias/
 *.prof
+*.xlsx
+scalene-profile.json

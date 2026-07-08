@@ -4,6 +4,7 @@ from src.ExtratorDiario import Diario, ExtratorDiario
 from src.ExtratorProcesso import ExtratorProcesso, ProcessoAposentadoria
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
+
 import typer, os
 import numpy as np
 
@@ -26,16 +27,16 @@ def processar(
 
         # Construir a matriz de dados
         diarios, processos, processos_offset = construir_matriz(futuros)
+    
+    from src.ConstrutorExcel import ConstrutorExcel
 
-    # linha = ler_linha(diarios, processos, processos_offset, 1)
+    # Exportar dados em uma tabela excel
+    excel = ConstrutorExcel("PROCESSOS_APOSENTADORIAS")
 
-    # print("*"*25)
-    # print(f"Diário: {linha['diario']}")
-    # print(f"Total de processos: {len(linha['processos'])}") # type: ignore
-    # for processo in linha['processos']: # type: ignore
-    #     print("\n")
-    #     print(processo)
-    # print("*"*25)
+    for idx, _ in enumerate(diarios):
+        excel.adicionar_linha(*ler_linha(diarios, processos, processos_offset, idx))
+        
+    excel.salvar(saida)
 
 def extrair_dados(diario_caminho: Path) -> tuple[Diario | None, list[ProcessoAposentadoria] | None]:
     
@@ -79,7 +80,7 @@ def construir_matriz(futuros) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         np.array(tmp_processos, dtype=object),
         np.array(tmp_processos_offset, dtype=np.int32))
 
-def ler_linha(diarios: np.ndarray, processos: np.ndarray, processos_offset: np.ndarray, linha: int) -> Dict[str, object]:
+def ler_linha(diarios: np.ndarray, processos: np.ndarray, processos_offset: np.ndarray, linha: int) -> tuple:
     """Lê uma linha da matriz de dados e retorna um dicionário com os dados."""
 
     diario = diarios[linha]
@@ -87,10 +88,7 @@ def ler_linha(diarios: np.ndarray, processos: np.ndarray, processos_offset: np.n
     processo_fim = processos_offset[linha + 1] if linha + 1 < len(processos_offset) else len(processos)
     processos_linha = processos[processo_inicio:processo_fim]
 
-    return {
-        "diario": diario,
-        "processos": processos_linha
-    }
+    return diario, processos_linha
 
 if __name__ == "__main__":
     app()
