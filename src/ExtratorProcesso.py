@@ -67,7 +67,7 @@ class ExtratorProcesso:
             interessado=interessados[idx],
             orgao_origem=orgaos_origem[idx],
             decisao=decisoes[idx],
-            #acordao=acordaos[idx]
+            acordao=acordaos[idx]
         )) for idx, numero in enumerate(processos_numeros)]
 
         return processos
@@ -159,7 +159,7 @@ class ExtratorProcesso:
             end_idx = min(len(texto), match.end() + DISTANCIA)
             window = texto[start_idx:end_idx]
             
-            orgao_pattern = r'(?:[ÓO]RG[ÃA]O DE ORIGEM|PROCED[ÊE]NCIA):?[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
+            orgao_pattern = r'(?:[ÓO]RG[ÃA]O DE ORIGEM|PROCED[ÊE]NCIA|UNIDADE GESTORA):?[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
             orgao_match = re.search(orgao_pattern, window)
             
             if orgao_match:
@@ -171,10 +171,25 @@ class ExtratorProcesso:
     
     @staticmethod
     def _extrair_acordaos(texto: str) -> list[str]:
-        # PADRÂO = r''
-        # matches = re.findall(PADRAO, texto)
+        acordaos = []
+    
+        PADRAO = r'ASSUNTO:[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
+        DISTANCIA = 500
 
-        return []
+        for match in re.finditer(PADRAO, texto, re.DOTALL):
+            start_idx = max(0, match.start() - DISTANCIA)
+            end_idx = min(len(texto), match.end() + DISTANCIA)
+            window = texto[start_idx:end_idx]
+            
+            orgao_pattern = r'(AC[ÓO]RD[ÃA]O[\s\xA0][A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9nº°№ \t\-\–\—\/\\.,\(\)]+)(?:\n[ \t]*(?![A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:)[A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9nº°№ \t\-\–\—\/\\.,\(\)]+)*'
+            orgao_match = re.search(orgao_pattern, window)
+            
+            if orgao_match:
+                acordaos.append(orgao_match.group(1).strip())
+            else:
+                acordaos.append("")
+
+        return acordaos
     
 
         
