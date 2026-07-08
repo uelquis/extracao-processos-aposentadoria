@@ -6,7 +6,8 @@ from pathlib import Path
 class ConstrutorExcel:
     def __init__(self, nome_arquivo):
         self._nome_arquivo = nome_arquivo
-        self._wb = Workbook()
+        self._wb = Workbook(write_only=True)
+        self._wb.create_sheet("Processos Aposentadoria")
         self._ws = self._wb.active
 
         if self._ws is None : raise ValueError("Não há uma worksheet ativa!")

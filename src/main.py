@@ -23,20 +23,23 @@ def processar(
     MAX_PROCESSOS = os.cpu_count()
     with ProcessPoolExecutor(max_workers=MAX_PROCESSOS) as executor:
         
-        futuros = {executor.submit(extrair_dados, caminho) for caminho in diarios_caminhos}
+        futuros = {executor.submit(extrair_dados, caminho) for caminho in diarios_caminhos[:1]}
 
         # Construir a matriz de dados
         diarios, processos, processos_offset = construir_matriz(futuros)
     
     from src.ConstrutorExcel import ConstrutorExcel
 
-    # Exportar dados em uma tabela excel
-    excel = ConstrutorExcel("PROCESSOS_APOSENTADORIAS")
+    try:
+        # Exportar dados em uma tabela excel
+        excel = ConstrutorExcel("PROCESSOS_APOSENTADORIAS")
 
-    for idx, _ in enumerate(diarios):
-        excel.adicionar_linha(*ler_linha(diarios, processos, processos_offset, idx))
-        
-    excel.salvar(saida)
+        for idx, _ in enumerate(diarios):
+            excel.adicionar_linha(*ler_linha(diarios, processos, processos_offset, idx))
+            
+        excel.salvar(saida)
+    except Exception as err:
+        print(f"Erro ao exportar dados para excel: {err}")
 
 def extrair_dados(diario_caminho: Path) -> tuple[Diario | None, list[ProcessoAposentadoria] | None]:
     
