@@ -10,10 +10,13 @@ class Diario:
     numero: str = ""
     data_disponibilizacao: str = ""
     data_publicacao: str = ""
-    nome_arquivo: str = ""
+    arquivo_nome: str = ""
 
     def __str__(self) -> str:
-        return f"Diário {self.numero} - Disponibilização: {self.data_disponibilizacao}, Publicação: {self.data_publicacao}, Arquivo: {self.nome_arquivo}"
+        return f"Diário {self.numero} - Disponibilização: {self.data_disponibilizacao}, Publicação: {self.data_publicacao}, Arquivo: {self.arquivo_nome}"
+
+class DiarioError(Exception):
+    pass
 
 class ExtratorDiario:
 
@@ -30,7 +33,7 @@ class ExtratorDiario:
                 numero=ExtratorDiario._extrair_numero(texto),
                 data_disponibilizacao=ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.DISPONIBILIZACAO),
                 data_publicacao=ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.PUBLICACAO),
-                nome_arquivo=Path(pdf_caminho).name
+                arquivo_nome=Path(pdf_caminho).name
             )
 
         return diario

@@ -29,7 +29,7 @@ class ConstrutorExcel:
                 diario.numero,
                 diario.data_disponibilizacao,
                 diario.data_publicacao,
-                diario.nome_arquivo
+                diario.arquivo_nome
             ])
 
     def salvar(self, caminho: Path):

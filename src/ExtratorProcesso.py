@@ -4,6 +4,7 @@ from pathlib import Path
 from itertools import chain
 from pdfplumber.page import Page
 import re, pdfplumber
+from enum import Enum
 
 @dataclass(slots=True)
 class ProcessoAposentadoria:
@@ -18,8 +19,19 @@ class ProcessoAposentadoria:
     def __str__(self) -> str:
         return f"Processo: {self.numero} \nInteressado: {self.interessado} \nAssunto: {self.assunto} \nÓrgão de Origem: {self.orgao_origem} \nDecisão: {self.decisao} \nAcórdão: {self.acordao}"
 
+class ProcessoDeAposentadoriaError(Exception):
+     pass
+
+class Padroes(Enum):
+    ASSUNTO = r'ASSUNTO:[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
+    DECISAO = r'(DECISÃO\b(?!\s*MONOCR[ÁA]TICA\b)[\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|\n\s*[A-ZÁÉÍÓÚÂÊÔÃÕÇ]?[a-záéíóúâêôãõç]|$)'
+    INTERESSADO = r'INTERESSAD[OA](?:[\s\xA0]*\(A\))?[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
+    PROCESSO = r'\bPROCESSO:?\s*TC[:\s/]*[Nn]?\.?[º°]?\s*(\d{3}\.?\d{3}\/\d{4})\b'
+    ACORDAO = r'(AC[ÓO]RD[ÃA]O[\s\xA0][A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9nº°№ \t\-\–\—\/\\.,\(\)]+)(?:\n[ \t]*(?![A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:)[A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9nº°№ \t\-\–\—\/\\.,\(\)]+)*'
+    ORGAO_ORIGEM = r'(?:[ÓO]RG[ÃA]O DE ORIGEM|PROCED[ÊE]NCIA|UNIDADE GESTORA):?[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
+
 class ExtratorProcesso:
-    
+
     @staticmethod
     def extrair(pdf_caminho: Path) -> list[ProcessoAposentadoria]:
         with pdfplumber.open(pdf_caminho) as pdf:
@@ -110,17 +122,31 @@ class ExtratorProcesso:
 
     @staticmethod
     def _extrair_numeros_dos_processos(texto: str) -> list[str]:
-        matches = re.findall(r'\bPROCESSO:?\s*TC[:\s/]*N?[º°]?\s*(\d{6}\/\d{4})\b', texto)
-        
-        return [m.replace('\n', ' ') for m in matches]
+        processos = []
+
+        DISTANCIA = 500
+
+        for match in re.finditer(Padroes.ASSUNTO.value, texto, re.DOTALL):
+            start_idx = max(0, match.start() - DISTANCIA)
+            end_idx = min(len(texto), match.end() + DISTANCIA)
+            chunk = texto[start_idx:end_idx]
+            
+            processo_pattern = Padroes.PROCESSO.value
+            processo_match = re.search(processo_pattern, chunk)
+            
+            if processo_match is None: continue
+
+            processos.append(processo_match.group(1)) # type: ignore
+                
+        return processos
     
     @staticmethod
     def _extrair_assuntos_dos_processos(texto: str) -> list[str]:
-        return re.findall(r'ASSUNTO:[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)', texto, re.DOTALL)
+        return re.findall(Padroes.ASSUNTO.value, texto, re.DOTALL)
 
     @staticmethod
     def _extrair_interessados_dos_processos(texto: str) -> list[str]:
-        matches = re.findall(r'INTERESSAD[OA](?:[\s\xA0]*\(A\))?[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)', texto, re.DOTALL)
+        matches = re.findall(Padroes.INTERESSADO.value, texto, re.DOTALL)
         
         return [m.strip(':') for m in matches]
 
@@ -128,17 +154,16 @@ class ExtratorProcesso:
     def _extrair_numeros_das_decisoes(texto: str) -> list[str]:
         decisoes = []
     
-        PADRAO = r'ASSUNTO:[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
         DISTANCIA = 500
 
-        for match in re.finditer(PADRAO, texto):
+        for match in re.finditer(Padroes.ASSUNTO.value, texto):
 
             start_idx = max(0, match.start() - DISTANCIA)
             end_idx = min(len(texto), match.end() + DISTANCIA)
-            window = texto[start_idx:end_idx]
+            chunk = texto[start_idx:end_idx]
             
-            decisao_pattern = r'(DECISÃO\b(?!\s*MONOCR[ÁA]TICA\b)[\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|\n\s*[A-ZÁÉÍÓÚÂÊÔÃÕÇ]?[a-záéíóúâêôãõç]|$)'
-            decisao_match = re.search(decisao_pattern, window)
+            decisao_pattern = Padroes.DECISAO.value
+            decisao_match = re.search(decisao_pattern, chunk)
             
             if decisao_match:
                 decisoes.append(decisao_match.group(1).strip())
@@ -151,16 +176,14 @@ class ExtratorProcesso:
     def _extrair_orgaos_de_origem(texto: str) -> list[str]:
         orgaos_de_origem = []
     
-        PADRAO = r'ASSUNTO:[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
         DISTANCIA = 500
 
-        for match in re.finditer(PADRAO, texto, re.DOTALL):
+        for match in re.finditer(Padroes.ASSUNTO.value, texto, re.DOTALL):
             start_idx = max(0, match.start() - DISTANCIA)
             end_idx = min(len(texto), match.end() + DISTANCIA)
-            window = texto[start_idx:end_idx]
+            chunk = texto[start_idx:end_idx]
             
-            orgao_pattern = r'(?:[ÓO]RG[ÃA]O DE ORIGEM|PROCED[ÊE]NCIA|UNIDADE GESTORA):?[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
-            orgao_match = re.search(orgao_pattern, window)
+            orgao_match = re.search(Padroes.ORGAO_ORIGEM.value, chunk)
             
             if orgao_match:
                 orgaos_de_origem.append(orgao_match.group(1).strip())
@@ -173,16 +196,14 @@ class ExtratorProcesso:
     def _extrair_acordaos(texto: str) -> list[str]:
         acordaos = []
     
-        PADRAO = r'ASSUNTO:[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
         DISTANCIA = 500
 
-        for match in re.finditer(PADRAO, texto, re.DOTALL):
+        for match in re.finditer(Padroes.ASSUNTO.value, texto, re.DOTALL):
             start_idx = max(0, match.start() - DISTANCIA)
             end_idx = min(len(texto), match.end() + DISTANCIA)
-            window = texto[start_idx:end_idx]
+            chunk = texto[start_idx:end_idx]
             
-            orgao_pattern = r'(AC[ÓO]RD[ÃA]O[\s\xA0][A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9nº°№ \t\-\–\—\/\\.,\(\)]+)(?:\n[ \t]*(?![A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:)[A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9nº°№ \t\-\–\—\/\\.,\(\)]+)*'
-            orgao_match = re.search(orgao_pattern, window)
+            orgao_match = re.search(Padroes.ACORDAO.value, chunk)
             
             if orgao_match:
                 acordaos.append(orgao_match.group(1).strip())
