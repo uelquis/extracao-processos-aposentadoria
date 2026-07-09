@@ -23,9 +23,9 @@ class ProcessoDeAposentadoriaError(Exception):
      pass
 
 class Padroes(Enum):
-    ASSUNTO = r'ASSUNTO:[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
+    ASSUNTO = r'ASSUNTO:[\s\xA0]*(APOSENTADORIA[\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
     DECISAO = r'(DECISÃO\b(?!\s*MONOCR[ÁA]TICA\b)[\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|\n\s*[A-ZÁÉÍÓÚÂÊÔÃÕÇ]?[a-záéíóúâêôãõç]|$)'
-    INTERESSADO = r'INTERESSAD[OA](?:[\s\xA0]*\(A\))?[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
+    INTERESSADO = r'INTERESSS?[AD]{0,2}[OA](?:[\s\xA0]*\(A\))?[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
     PROCESSO = r'\bPROCESSO:?\s*TC[:\s/]*[Nn]?\.?[º°]?\s*(\d{3}\.?\d{3}\/\d{4})\b'
     ACORDAO = r'(AC[ÓO]RD[ÃA]O[\s\xA0][A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9nº°№ \t\-\–\—\/\\.,\(\)]+)(?:\n[ \t]*(?![A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:)[A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9nº°№ \t\-\–\—\/\\.,\(\)]+)*'
     ORGAO_ORIGEM = r'(?:[ÓO]RG[ÃA]O DE ORIGEM|PROCED[ÊE]NCIA|UNIDADE GESTORA):?[\s\xA0]*([\s\S]+?)(?=(?:\.\s+|\n[ \t]*)[A-ZÁÉÍÓÚÂÊÔÃÕÇ \(\)]+:|$)'
@@ -33,12 +33,12 @@ class Padroes(Enum):
 class ExtratorProcesso:
 
     @staticmethod
-    def extrair(pdf_caminho: Path) -> list[ProcessoAposentadoria]:
+    def extrair(pdf_caminho: Path, diario_nome: str) -> list[ProcessoAposentadoria]:
         with pdfplumber.open(pdf_caminho) as pdf:
             
             filtradas = ExtratorProcesso._filtrar_paginas(ExtratorProcesso._extrair_texto_das_paginas(pdf.pages))
 
-            processos = [ExtratorProcesso._extrair_processo(texto) for texto in filtradas]
+            processos = [ExtratorProcesso._extrair_processo(texto, diario_nome) for texto in filtradas]
             
         return list(chain.from_iterable(processos))
     
@@ -59,7 +59,7 @@ class ExtratorProcesso:
         return paginas_com_processo
     
     @staticmethod
-    def _extrair_processo( texto: str) -> list[ProcessoAposentadoria]:
+    def _extrair_processo( texto: str, diario_nome: str) -> list[ProcessoAposentadoria]:
         """
         Extrai os processos de aposentadoria do texto da página.
         Retorna uma lista de objetos ProcessoAposentadoria.
@@ -73,14 +73,19 @@ class ExtratorProcesso:
         orgaos_origem = ExtratorProcesso._extrair_orgaos_de_origem(texto)
         acordaos = ExtratorProcesso._extrair_acordaos(texto)
 
-        [processos.append(ProcessoAposentadoria(
-            numero=numero, 
-            assunto=processos_assuntos[idx],
-            interessado=interessados[idx],
-            orgao_origem=orgaos_origem[idx],
-            decisao=decisoes[idx],
-            acordao=acordaos[idx]
-        )) for idx, numero in enumerate(processos_numeros)]
+        for idx, numero in enumerate(processos_numeros):
+            try:
+                processos.append(ProcessoAposentadoria(
+                    numero=numero, 
+                    assunto=processos_assuntos[idx],
+                    interessado=interessados[idx],
+                    orgao_origem=orgaos_origem[idx],
+                    decisao=decisoes[idx],
+                    acordao=acordaos[idx]
+                ))
+            except Exception as err:
+                print(f"Erro ao extrair processo: {numero} do diario: {diario_nome}! : {err}")
+
 
         return processos
     
@@ -116,8 +121,8 @@ class ExtratorProcesso:
             if textos_coluna_direita[i] is None:
                 raise ValueError(f"Erro ao extrair o texto da coluna direita da página {i}. O texto extraído é vazio.")
             
-            textos.append(textos_coluna_esquerda[i])
-            textos.append(textos_coluna_direita[i])
+            textos.append(textos_coluna_esquerda[i] + textos_coluna_direita[i])
+
         return textos
 
     @staticmethod

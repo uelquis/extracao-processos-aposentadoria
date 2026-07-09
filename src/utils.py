@@ -14,7 +14,7 @@ def extrair_dados(diario_caminho: Path) -> tuple[Diario | None, list[ProcessoApo
 
         try:
             diario = ExtratorDiario.extrair(diario_caminho)
-            processos_extraidos = ExtratorProcesso.extrair(diario_caminho)
+            processos_extraidos = ExtratorProcesso.extrair(diario_caminho, diario.arquivo_nome)
             
         except DiarioError as err:
             print(f"Erro ao extrair dados do diário {diario_caminho}: {err}")
@@ -42,7 +42,7 @@ def construir_matriz(futuros) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
             tmp_processos_offset.append(len(tmp_processos))
                 
         except DiarioError as err:
-            print(f'Erro ao construir matriz:'.upper())
+            print(f'DiarioError ao construir matriz:'.upper())
             traceback.print_exception(err)
             tmp_diarios.pop()
         except Exception as err:
