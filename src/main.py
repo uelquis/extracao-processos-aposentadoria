@@ -18,7 +18,7 @@ def processar(
     MAX_PROCESSOS = os.cpu_count()
     with ProcessPoolExecutor(max_workers=MAX_PROCESSOS) as executor:
         
-        futuros = {executor.submit(extrair_dados, caminho) for caminho in diarios_caminhos[:100]}
+        futuros = {executor.submit(extrair_dados, caminho) for caminho in diarios_caminhos}
 
         # Construir a matriz de dados
         diarios, processos, processos_offset = construir_matriz(futuros)
