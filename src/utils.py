@@ -4,17 +4,17 @@ from ExtratorDiario import Diario, ExtratorDiario, DiarioError
 from ExtratorProcesso import ExtratorProcesso, ProcessoAposentadoria, ProcessoDeAposentadoriaError
 from concurrent.futures import as_completed
 
-import numpy as np
+import pyarrow as pa
 import traceback
 
-def extrair_dados(diario_caminho: Path) -> tuple[Diario | None, list[ProcessoAposentadoria] | None]:
+def extrair_dados(diario_caminho: Path) -> tuple[tuple | None, list[ProcessoAposentadoria] | None]:
     
         diario = None
         processos_extraidos = None
 
         try:
             diario = ExtratorDiario.extrair(diario_caminho)
-            processos_extraidos = ExtratorProcesso.extrair(diario_caminho, diario.arquivo_nome)
+            processos_extraidos = ExtratorProcesso.extrair(diario_caminho, diario[3])
             
         except DiarioError as err:
             print(f"Erro ao extrair dados do diário {diario_caminho}: {err}")
@@ -23,7 +23,7 @@ def extrair_dados(diario_caminho: Path) -> tuple[Diario | None, list[ProcessoApo
 
         return (diario, processos_extraidos)
 
-def construir_matriz(futuros) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def construir_matriz(futuros):
     """Constrói a matriz de dados a partir dos PDFs informados."""
 
     tmp_diarios : list[Diario] = []
@@ -36,7 +36,7 @@ def construir_matriz(futuros) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
             if diario != None: tmp_diarios.append(diario)
 
             processos_extraidos = futuro.result()[1]
-            if processos_extraidos is None or []: raise DiarioError(f"O diário {diario.arquivo_nome} não está associado a nenhum processos de aposentadoria!")
+            if processos_extraidos is None or []: raise DiarioError(f"O diário {diario[3]} não está associado a nenhum processos de aposentadoria!")
             tmp_processos.extend(processos_extraidos)
 
             tmp_processos_offset.append(len(tmp_processos))
@@ -50,11 +50,11 @@ def construir_matriz(futuros) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
             traceback.print_exception(err)
 
     return (
-        np.array(tmp_diarios, dtype=object),
-        np.array(tmp_processos, dtype=object),
-        np.array(tmp_processos_offset, dtype=np.int32))
+        pa.array(tmp_diarios),
+        pa.array(tmp_processos),
+        pa.array(tmp_processos_offset))
 
-def ler_linha(diarios: np.ndarray, processos: np.ndarray, processos_offset: np.ndarray, linha: int) -> tuple:
+def ler_linha(diarios, processos, processos_offset, linha: int) -> tuple:
     """Lê uma linha da matriz de dados e retorna um dicionário com os dados."""
 
     diario = diarios[linha]

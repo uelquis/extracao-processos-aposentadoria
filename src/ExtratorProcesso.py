@@ -6,6 +6,8 @@ from pdfplumber.page import Page
 import re, pdfplumber
 from enum import Enum
 
+import pyarrow as pa
+
 @dataclass(slots=True)
 class ProcessoAposentadoria:
     """Representa um processo extraído de um PDF."""
@@ -33,17 +35,17 @@ class Padroes(Enum):
 class ExtratorProcesso:
 
     @staticmethod
-    def extrair(pdf_caminho: Path, diario_nome: str) -> list[ProcessoAposentadoria]:
+    def extrair(pdf_caminho: Path, diario_nome: str):
         with pdfplumber.open(pdf_caminho) as pdf:
             
             filtradas = ExtratorProcesso._filtrar_paginas(ExtratorProcesso._extrair_texto_das_paginas(pdf.pages))
 
             processos = [ExtratorProcesso._extrair_processo(texto, diario_nome) for texto in filtradas]
             
-        return list(chain.from_iterable(processos))
+        return pa.chunked_array(processos)
     
     @staticmethod
-    def _filtrar_paginas( paginas: list[str]) -> list[str]:
+    def _filtrar_paginas( paginas) -> list[str]:
         """
         Filtra as páginas que contêm processos de aposentadoria.
         Retorna uma lista que contém os textos das páginas que contêm processos de aposentadoria.
@@ -59,7 +61,7 @@ class ExtratorProcesso:
         return paginas_com_processo
     
     @staticmethod
-    def _extrair_processo( texto: str, diario_nome: str) -> list[ProcessoAposentadoria]:
+    def _extrair_processo( texto: str, diario_nome: str):
         """
         Extrai os processos de aposentadoria do texto da página.
         Retorna uma lista de objetos ProcessoAposentadoria.
@@ -75,19 +77,18 @@ class ExtratorProcesso:
 
         for idx, numero in enumerate(processos_numeros):
             try:
-                processos.append(ProcessoAposentadoria(
-                    numero=numero, 
-                    assunto=processos_assuntos[idx],
-                    interessado=interessados[idx],
-                    orgao_origem=orgaos_origem[idx],
-                    decisao=decisoes[idx],
-                    acordao=acordaos[idx]
+                processos.append((
+                    numero, 
+                    processos_assuntos[idx],
+                    interessados[idx],
+                    orgaos_origem[idx],
+                    decisoes[idx],
+                    acordaos[idx]
                 ))
             except Exception as err:
                 print(f"Erro ao extrair processo: {numero} do diario: {diario_nome}! : {err}")
 
-
-        return processos
+        return pa.array(processos)
     
     @staticmethod
     def _extrair_texto_das_paginas(paginas : list[Page]) -> list[str]:

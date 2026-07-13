@@ -3,6 +3,7 @@ from concurrent.futures import ProcessPoolExecutor
 from utils import extrair_dados, construir_matriz, ler_linha
 
 import typer, os
+import pyarrow as pa
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 
@@ -18,7 +19,7 @@ def processar(
     MAX_PROCESSOS = os.cpu_count()
     with ProcessPoolExecutor(max_workers=MAX_PROCESSOS) as executor:
         
-        futuros = {executor.submit(extrair_dados, caminho) for caminho in diarios_caminhos}
+        futuros = {executor.submit(extrair_dados, caminho) for caminho in diarios_caminhos[:10]}
 
         # Construir a matriz de dados
         diarios, processos, processos_offset = construir_matriz(futuros)

@@ -25,22 +25,20 @@ class ExtratorDiario:
         PUBLICACAO = "publicacao"
 
     @staticmethod
-    def extrair(pdf_caminho: Path) -> Diario:
+    def extrair(pdf_caminho: Path) -> tuple[str, str, str, str]:
         with pdfplumber.open(pdf_caminho) as pdf:
             texto = pdf.pages[0].extract_text()
 
-            diario = Diario(
-                numero=ExtratorDiario._extrair_numero(texto),
-                data_disponibilizacao=ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.DISPONIBILIZACAO),
-                data_publicacao=ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.PUBLICACAO),
-                arquivo_nome=Path(pdf_caminho).name
-            )
-
-        return diario
+        return (
+            ExtratorDiario._extrair_numero(texto),
+            ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.DISPONIBILIZACAO),
+            ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.PUBLICACAO),
+            Path(pdf_caminho).name
+        )
     
     @staticmethod
     def _extrair_numero(texto: str) -> str:
-        match = re.search(r"Edição nº (\d{3}/\d{4})", texto)
+        match = re.search(r"Edição\s*nº\s*(\d{3}/\d{4})", texto)
         return match.group(1) if match else ""
 
     @staticmethod
