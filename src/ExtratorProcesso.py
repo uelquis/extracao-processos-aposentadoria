@@ -42,18 +42,17 @@ class ExtratorProcesso:
         return list(chain.from_iterable(processos))
     
     @staticmethod
-    def _filtrar_paginas( paginas: list[str]) -> list[str]:
+    def _filtrar_paginas(paginas: list[str]) -> list[str]:
         """
         Filtra as páginas que contêm processos de aposentadoria.
         Retorna uma lista que contém os textos das páginas que contêm processos de aposentadoria.
         """
         paginas_com_processo = []
-        idx = 0
+
         for texto in paginas:
             match = re.search(r'ASSUNTO:\s*APOSENTADORIA', texto)
             if match:
                 paginas_com_processo.append(texto)
-            idx += 1
 
         return paginas_com_processo
     
