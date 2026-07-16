@@ -25,16 +25,15 @@ class ExtratorDiario:
         PUBLICACAO = "publicacao"
 
     @staticmethod
-    def extrair(pdf_caminho: Path) -> Diario:
-        with pdfplumber.open(pdf_caminho) as pdf:
-            texto = pdf.pages[0].extract_text()
+    def extrair(pdf: pdfplumber.pdf.PDF, arquivo_nome) -> Diario:
+        texto = pdf.pages[0].extract_text()
 
-            diario = Diario(
-                numero=ExtratorDiario._extrair_numero(texto),
-                data_disponibilizacao=ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.DISPONIBILIZACAO),
-                data_publicacao=ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.PUBLICACAO),
-                arquivo_nome=Path(pdf_caminho).name
-            )
+        diario = Diario(
+            numero=ExtratorDiario._extrair_numero(texto),
+            data_disponibilizacao=ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.DISPONIBILIZACAO),
+            data_publicacao=ExtratorDiario._extrair_data(texto, ExtratorDiario.DataTipo.PUBLICACAO),
+            arquivo_nome=arquivo_nome
+        )
 
         return diario
     

@@ -4,6 +4,7 @@ from ExtratorDiario import Diario, ExtratorDiario, DiarioError
 from ExtratorProcesso import ExtratorProcesso, ProcessoAposentadoria, ProcessoDeAposentadoriaError
 from concurrent.futures import as_completed
 
+import pdfplumber
 import numpy as np
 import traceback
 
@@ -12,16 +13,18 @@ def extrair_dados(diario_caminho: Path) -> tuple[Diario | None, list[ProcessoApo
         diario = None
         processos_extraidos = None
 
-        try:
-            diario = ExtratorDiario.extrair(diario_caminho)
-            processos_extraidos = ExtratorProcesso.extrair(diario_caminho, diario.arquivo_nome)
-            
-        except DiarioError as err:
-            print(f"Erro ao extrair dados do diário {diario_caminho}: {err}")
-        except ProcessoDeAposentadoriaError as err:
-            print(f"Erro ao extrair processos do diário {diario_caminho}: {err}")
+        with pdfplumber.open(diario_caminho) as pdf:
+            try:
+                arquivo_nome = Path(diario_caminho).name
+                diario = ExtratorDiario.extrair(pdf, arquivo_nome)
+                processos_extraidos = ExtratorProcesso.extrair(pdf, arquivo_nome)
+                
+            except DiarioError as err:
+                print(f"Erro ao extrair dados do diário {diario_caminho}: {err}")
+            except ProcessoDeAposentadoriaError as err:
+                print(f"Erro ao extrair processos do diário {diario_caminho}: {err}")
 
-        return (diario, processos_extraidos)
+            return (diario, processos_extraidos)
 
 def construir_matriz(futuros) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Constrói a matriz de dados a partir dos PDFs informados."""

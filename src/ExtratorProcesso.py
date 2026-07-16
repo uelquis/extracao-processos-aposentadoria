@@ -33,12 +33,11 @@ class Padroes(Enum):
 class ExtratorProcesso:
 
     @staticmethod
-    def extrair(pdf_caminho: Path, diario_nome: str) -> list[ProcessoAposentadoria]:
-        with pdfplumber.open(pdf_caminho) as pdf:
-            
-            filtradas = ExtratorProcesso._filtrar_paginas(ExtratorProcesso._extrair_texto_das_paginas(pdf.pages))
+    def extrair(pdf: pdfplumber.pdf.PDF, diario_nome: str) -> list[ProcessoAposentadoria]:
+       
+        filtradas = ExtratorProcesso._filtrar_paginas(ExtratorProcesso._extrair_texto_das_paginas(pdf.pages))
 
-            processos = [ExtratorProcesso._extrair_processo(texto, diario_nome) for texto in filtradas]
+        processos = [ExtratorProcesso._extrair_processo(texto, diario_nome) for texto in filtradas]
             
         return list(chain.from_iterable(processos))
     
