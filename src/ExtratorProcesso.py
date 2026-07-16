@@ -110,6 +110,9 @@ class ExtratorProcesso:
 
             textos_coluna_esquerda.append(texto_esquerda)
             textos_coluna_direita.append(texto_direita)
+
+            # Limpa dados da página na memória
+            pagina.flush_cache()
         
         # ordernar os textos das colunas
         textos = []
